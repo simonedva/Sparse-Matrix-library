@@ -3,12 +3,13 @@
  * @brief Library for sparse matrixes
  *
  * @author Simone De Vecchi (<simonedva@gmail.com>)
- * @version 1.0
+ * @version 1.1
  * @since 1.0
  */
 
 #include "sparse.h"
 #include <stdio.h>
+#include "math.h"
 
 /**
  * @brief Generate the sparse matrix of the matrix associated with pointer in passed
@@ -75,7 +76,7 @@ int generateSparse(elem_t* out, const double* in, const int m, const int n) {
 int multiplySparse(elem_t* out, const elem_t* in1, const elem_t* in2) {
 
 	//checking if matrixes are compatible
-	if (in1->i != in2->j) {
+	if (in1->j != in2->i) {
 		return 0;
 	}
 
@@ -85,9 +86,7 @@ int multiplySparse(elem_t* out, const elem_t* in1, const elem_t* in2) {
 	int j;
 	double value1;
 	double value2;
-	int pos[(int) in2->j]; //in the worst case i have in2->j non-zero elements in each column
-	int posnnz;
-	int currpos;
+	int found;
 
 	//very used elements
 	elem_t curr1;
@@ -101,60 +100,45 @@ int multiplySparse(elem_t* out, const elem_t* in1, const elem_t* in2) {
 		j = curr1.j;
 		value1 = curr1.value;
 
-		//collects elements in row j-th in pos[]
-		posnnz = 0;
 		for (int h = 0; h < (int) in2->value; h++) {
+
 			curr2 = *(in2+h+1);
-			if (curr2.i == j) {
-				pos[posnnz++] = h; //update number of pos of non-zero elements and collects the relative position of each elem
-			}
-		} //now in posnnz i have the number of non-zeros
 
-		for (int c=0; c<posnnz; c++) {
-			currpos = pos[c];
-			value2 = (in2+currpos+1)->value;
+			if (curr2.i == j) { //if this row index has non-zero element
 
-			int found = 0;
-			for(int h = 0; h < nout_new; h++) {
+				value2 = (in2+h+1)->value;
 
-				//searching if elem at index (i,c) already exist
-				curr3 = *(out+h+1);
+				found = 0;
+				for (int c = 0; c < nout_new; c++) {
+					//searching if elem at index (i,c) already exists
+					curr3 = *(out+c+1);
 
-				if (curr3.i == i && curr3.j == c) {
-					(out+h+1)->value += value1*value2;
-					found = 1;
-					break;
+					if (curr3.i == i && curr3.j == curr2.j) {
+						(out+c+1)->value += value1*value2;
+						found = 1;
+						break;
+					}
+
+				}
+
+				if (!found) { //if doesn't exist such position then create a new one
+					(out+nout_new+1)->i = i;
+					(out+nout_new+1)->j = curr2.j;
+					(out+nout_new+1)->value = value1*value2;
+					nout_new++;
 				}
 
 			}
-			if (!found) { //if doesn't exist such position then create a new one
-				(out+nout_new+1)->i = i;
-				(out+nout_new+1)->j = c;
-				(out+nout_new+1)->value = value1*value2;
-				nout_new++;
-			}
-
 		}
 
 	}
+
 
 	//now in out i have nout_new elements
 	out->value = nout_new;
 
-	//collects in pos the positions to delete
-	int posz = 0;
-	for (int k = 0; k<nout_new; k++) {
-		curr1 = *(out+k);
-		if (curr1.value < INFVALUE) {
-			pos[posz++] = k;
-		}
-	}
-	/*
-	//deleting elem that are approximately 0
-	for (int k = 0; k < posz; k++) {
-		deleteElementSparse(out, pos[k]); //deletes pos[k]-th element and updates out->value at new nnz
-	}
-	*/
+	deleteZerosSparse(out);
+
 	return 1;
 }
 
@@ -213,13 +197,7 @@ int addSparse(elem_t* out, const elem_t* in1, const elem_t* in2) {
 
 	out->value = nout_new;
 
-	//deleting element if they are approximately 0
-	for (int k = 0; k < nout_new; k++) {
-
-		if ((out+k+1)->value < INFVALUE) {
-			deleteElementSparse(out, k);
-		}
-	}
+	deleteZerosSparse(out);
 
 	return 1;
 }
@@ -315,30 +293,39 @@ int transposeSparse(elem_t* matrix) {
 }
 
 /**
- * @brief transpose the sparse matrix in his own location
+ * @brief Delete elements which are approximately zero from the sparse matrix
  *
- * @param matrix Pointer to the first element of the sparse matrix
- * @param pos Relative position of the element to delete
+ * @param out Pointer to the first element of the sparse matrix
  *
  * @return 0 if errors occurred
  */
-int deleteElementSparse(elem_t* matrix, const int pos) {
+int deleteZerosSparse(elem_t* out) {
 
-	//gettin information
-	int nnz = (int) matrix->value;
+	//deleting element if they are approximately 0
+	for (int k = 0; k < (int) out->value; k++) {
+		if (k >= (int) out->value) {
+			break;
+		}
 
-	//check
-	if (pos>nnz|| matrix == NULL) {
-		return 0;
+		int pos = k+1;
+
+		if (fabs((out+pos)->value) < INFVALUE) {
+
+			//gettin last element
+			int nnz = (int) out->value;
+
+			//swap last element with the element to delete
+			(out+pos)->i = (out+nnz)->i;
+			(out+pos)->j = (out+nnz)->j;
+			(out+pos)->value = (out+nnz)->value;
+
+			//update nnz
+			nnz--;
+			out->value = nnz;
+
+			k--; //if the swapped element is also 0. need to be check
+		}
 	}
-
-	//sostitute last element with the element to delete
-	(matrix+pos+1)->i = (matrix+nnz)->i;
-	(matrix+pos+1)->j = (matrix+nnz)->j;
-	(matrix+pos+1)->value = (matrix+nnz)->value;
-
-	nnz--;
-	matrix->value = nnz;
 
 	return 1;
 }

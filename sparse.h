@@ -87,14 +87,13 @@ int fullSparse(double* out, const int m, const int n, const elem_t* in);
 int transposeSparse(elem_t* matrix);
 
 /**
- * @brief transpose the sparse matrix in his own location
+ * @brief Delete elements which are approximately zero from the sparse matrix
  *
- * @param matrix Pointer to the first element of the sparse matrix
- * @param pos Position over nnz element to delete
+ * @param out Pointer to the first element of the sparse matrix
  *
  * @return 0 if errors occurred
  */
-int deleteElementSparse(elem_t* matrix, const int pos);
+int deleteZerosSparse(elem_t* out);
 
 /**
  * @brief Print to standard output the matrix
