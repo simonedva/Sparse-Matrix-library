@@ -3,7 +3,7 @@
  * @brief Library for sparse matrixes
  *
  * @author Simone De Vecchi (<simonedva@gmail.com>)
- * @version 1.0
+ * @version 1.1
  * @since 1.0
  */
 
@@ -43,6 +43,19 @@ int generateSparse(elem_t* out, const double* in, const int m, const int n);
  * @return 0 if errors occurred
  */
 int multiplySparse(elem_t* out, const elem_t* in1, const elem_t* in2);
+
+/**
+ * @brief Multiplies a sparse matrix by a generic matrix and stores the result in the sparse matrix pointed by out
+ *
+ * @param out Pointer to the first element of the result sparse matrix
+ * @param in1 Pointer to the first element of the first sparse matrix to multiply
+ * @param in2 Pointer to the first element of the second generic matrix to multiply
+ * @param m Number of rows of the generic matrix
+ * @param n Number of columns of the generic matrix
+ *
+ * @return 0 if errors occurred
+ */
+int multiplySparse_Matrix(elem_t* out, const elem_t* in1, const double* in2, const int m, const int n);
 
 /**
  * @brief Stores in the sparse matrix pointed by out the result of the addition of the two sparse matrixes pointed by in1 and in2

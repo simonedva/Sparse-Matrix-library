@@ -3,7 +3,7 @@
  * @brief Library for sparse matrixes
  *
  * @author Simone De Vecchi (<simonedva@gmail.com>)
- * @version 1.1
+ * @version 1.2
  * @since 1.0
  */
 
@@ -124,6 +124,86 @@ int multiplySparse(elem_t* out, const elem_t* in1, const elem_t* in2) {
 				if (!found) { //if doesn't exist such position then create a new one
 					(out+nout_new+1)->i = i;
 					(out+nout_new+1)->j = curr2.j;
+					(out+nout_new+1)->value = value1*value2;
+					nout_new++;
+				}
+
+			}
+		}
+
+	}
+
+
+	//now in out i have nout_new elements
+	out->value = nout_new;
+
+	deleteZerosSparse(out);
+
+	return 1;
+}
+
+/**
+ * @brief Multiplies a sparse matrix by a generic matrix and stores the result in the sparse matrix pointed by out
+ *
+ * @param out Pointer to the first element of the result sparse matrix
+ * @param in1 Pointer to the first element of the first sparse matrix to multiply
+ * @param in2 Pointer to the first element of the second generic matrix to multiply
+ * @param m Number of rows of the generic matrix
+ * @param n Number of columns of the generic matrix
+ *
+ * @return 0 if errors occurred
+ */
+int multiplySparse_Matrix(elem_t* out, const elem_t* in1, const double* in2, const int m, const int n) {
+
+	//checking if matrixes are compatible
+	if (in1->j != m) {
+		return 0;
+	}
+
+	//very used variables
+	int nout_new = 0; //number of nnz in the output matrix
+	int i;
+	int j;
+	double value1;
+	double value2;
+	int found;
+
+	//very used elements
+	elem_t curr1;
+	elem_t curr3;
+
+	for (int k=0; k < (int) in1->value; k++) {
+
+		curr1 = *(in1+k+1);
+		i = curr1.i;
+		j = curr1.j;
+		value1 = curr1.value;
+
+		for (int h = 0; h < m*n; h++) {
+
+			int rowIndex = (int) h/n;
+			int columnIndex = h%n;
+
+			if (rowIndex == j) { //if this row index has non-zero element
+
+				value2 = *(in2+h);
+
+				found = 0;
+				for (int c = 0; c < nout_new; c++) {
+					//searching if elem at index (i,c) already exists
+					curr3 = *(out+c+1);
+
+					if (curr3.i == i && curr3.j == columnIndex) {
+						(out+c+1)->value += value1*value2;
+						found = 1;
+						break;
+					}
+
+				}
+
+				if (!found) { //if doesn't exist such position then create a new one
+					(out+nout_new+1)->i = i;
+					(out+nout_new+1)->j = columnIndex;
 					(out+nout_new+1)->value = value1*value2;
 					nout_new++;
 				}
